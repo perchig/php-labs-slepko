@@ -1,0 +1,11 @@
+{
+ "name": "php-labs/shemetov",
+ "type": "project",
+ "description": "LabWork",
+ "license": "MIT",
+ "autoload": {
+ "psr-4": {
+ "App\\": "src/"
+ }
+ }
+}
