@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 
 function getPdo(): PDO {
     $host = getenv('DB_HOST') ?: 'db';
-    $db   = getenv('DB_NAME') ?: 'php_Shemetov';
+    $db   = getenv('DB_NAME') ?: 'php_Slepko';
     $user = getenv('DB_USER') ?: 'root';
     $pass = getenv('DB_PASS') ?: 'lab2';
     $port = (int)(getenv('DB_PORT') ?: 3306);
