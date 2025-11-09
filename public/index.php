@@ -14,24 +14,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $username = trim((string)($_POST['username'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
+    $email = trim((string)($_POST['email'] ?? ''));
 
     // обработка регистрации
     if ($action === 'register') {
+        $password_confirm = (string)($_POST['password_confirm'] ?? '');
         $bg = trim((string)($_POST['bg_color'] ?? '#ffffff')); // по умолчанию задаём цвет
-        if ($username === '' || $password === '') {
-            $errors[] = 'Введите имя и пароль';
+        
+        // Валидация
+        if ($username === '' || $password === '' || $email === '') {
+            $errors[] = 'Заполните все обязательные поля';
+        } elseif (strlen($password) < 6) {
+            $errors[] = 'Пароль должен содержать минимум 6 символов';
+        } elseif ($password !== $password_confirm) {
+            $errors[] = 'Пароли не совпадают';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Некорректный email адрес';
         } else {
             $pdo = getPdo(); // открываем подключение к бд
-            $stmt = $pdo->prepare('SELECT id FROM users WHERE username = :u'); // проверка на совпадение ввёднного имени пользователя с базой данных
-            $stmt->execute([':u' => $username]);
+            $stmt = $pdo->prepare('SELECT id FROM users WHERE username = :u OR email = :e'); // проверка на совпадение ввёднного имени пользователя с базой данных
+            $stmt->execute([':u' => $username, ':e' => $email]);
             // если запрос к бд нам вернул id, то пользователь существует, возвращаем ошибку
             if ($stmt->fetch()) {
-                $errors[] = 'Пользователь уже существует';
+                $errors[] = 'Пользователь с таким именем или email уже существует';
             } else {
-                // иначе создаём пользователя, вставляем в таблицу  имя, хэш пароля, и цвет фона страницы
-                $hash = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, bg_color) VALUES (:u, :h, :bg)');
-                $stmt->execute([':u' => $username, ':h' => $hash, ':bg' => $bg]);
+                // иначе создаём пользователя, вставляем в таблицу  имя, email, хэш пароля, и цвет фона страницы
+                $hash = password_hash($password, PASSWORD_DEFAULT); // PHP сам выбирает алгоритм хэширования
+                $stmt = $pdo->prepare('INSERT INTO users (username, email, password_hash, bg_color) VALUES (:u, :e, :h, :bg)');
+                $stmt->execute([':u' => $username, ':e' => $email, ':h' => $hash, ':bg' => $bg]);
                 $_SESSION['user'] = ['id' => (int)$pdo->lastInsertId(), 'username' => $username, 'bg_color' => $bg];
                 // задаём cookie чтобы держать сессию логина в течении одного дня, параметры cookie лежат в ../src/config.php
                 setcookie('bg_color', $bg, [
@@ -43,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 // при успешной регистрации — после INSERT
                 $token = bin2hex(random_bytes(24));
-                $tokenExpires = date('Y-m-d H:i:s', time() + COOKIE_TTL);
+                $tokenExpires = date('Y-m-d H:i:s', time()  + COOKIE_TTL);
                 $update = $pdo->prepare('UPDATE users SET auth_token = :t, token_expires = :e WHERE id = :id');
                 $update->execute([':t' => $token, ':e' => $tokenExpires, ':id' => $_SESSION['user']['id']]);
                 setcookie('auth_token', $token, [
@@ -191,7 +201,9 @@ if (!empty($_SESSION['user'])) {
 <?php foreach ($errors as $e): ?><div style="color:red"><?= htmlspecialchars($e) ?></div><?php endforeach; ?>
 <form method="post">
     <label>Имя пользователя: <input name="username" required></label><br>
-    <label>Пароль: <input type="password" name="password" required></label><br>
+    <label>Email: <input type="email" name="email" required></label><br>
+    <label>Пароль (мин. 6 символов): <input type="password" name="password" required></label><br>
+    <label>Подтверждение пароля: <input type="password" name="password_confirm" required></label><br>
     <label>Цвет фона (hex): <input name="bg_color" value="#ffffff"></label><br>
     <button type="submit" name="action" value="login">Войти</button>
     <button type="submit" name="action" value="register">Зарегистрироваться</button>
