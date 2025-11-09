@@ -32,11 +32,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Некорректный email адрес';
         } else {
             $pdo = getPdo(); // открываем подключение к бд
-            $stmt = $pdo->prepare('SELECT id FROM users WHERE username = :u OR email = :e'); // проверка на совпадение ввёднного имени пользователя с базой данных
-            $stmt->execute([':u' => $username, ':e' => $email]);
+            $stmt = $pdo->prepare('SELECT id FROM users WHERE username = :u'); // проверка на совпадение ввёднного имени пользователя с базой данных
+            $stmt->execute([':u' => $username]);
             // если запрос к бд нам вернул id, то пользователь существует, возвращаем ошибку
             if ($stmt->fetch()) {
-                $errors[] = 'Пользователь с таким именем или email уже существует';
+                $errors[] = 'Пользователь уже существует';
             } else {
                 // иначе создаём пользователя, вставляем в таблицу  имя, email, хэш пароля, и цвет фона страницы
                 $hash = password_hash($password, PASSWORD_DEFAULT); // PHP сам выбирает алгоритм хэширования
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 // при успешной регистрации — после INSERT
                 $token = bin2hex(random_bytes(24));
-                $tokenExpires = date('Y-m-d H:i:s', time()  + COOKIE_TTL);
+                $tokenExpires = date('Y-m-d H:i:s', time() + COOKIE_TTL);
                 $update = $pdo->prepare('UPDATE users SET auth_token = :t, token_expires = :e WHERE id = :id');
                 $update->execute([':t' => $token, ':e' => $tokenExpires, ':id' => $_SESSION['user']['id']]);
                 setcookie('auth_token', $token, [
@@ -189,9 +189,6 @@ if (!empty($_SESSION['user'])) {
     <?php
     exit;
 }
-// TODO: попробовать развернуть на Nginx proxy manager через Duckdns,
-//  и подписать сертификаты TLS для HTTPS
-// Форма с двумя кнопками
 ?>
 <!doctype html>
 <html>
@@ -202,7 +199,7 @@ if (!empty($_SESSION['user'])) {
 <form method="post">
     <label>Имя пользователя: <input name="username" required></label><br>
     <label>Email: <input type="email" name="email" required></label><br>
-    <label>Пароль (мин. 6 символов): <input type="password" name="password" required></label><br>
+    <label></label>Пароль (мин. 6 символов): <input type="password" name="password" required></label><br>
     <label>Подтверждение пароля: <input type="password" name="password_confirm" required></label><br>
     <label>Цвет фона (hex): <input name="bg_color" value="#ffffff"></label><br>
     <button type="submit" name="action" value="login">Войти</button>
