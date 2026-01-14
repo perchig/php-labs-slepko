@@ -11,11 +11,12 @@ services:
       - php-fpm
       - db
   db:
-    image: mysql:8.0.43-debian
+    image: mysql:8.0
+    platform: linux/amd64
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: lab2
-      MYSQL_DATABASE: php_Shemetov
+      MYSQL_DATABASE: php_Slepko
     volumes:
       - db_data:/var/lib/mysql
   php-fpm:
@@ -28,7 +29,7 @@ services:
     - "9000"
     environment:
     - DB_HOST=db
-    - DB_NAME=php_Shemetov
+    - DB_NAME=php_Slepko
     - DB_USER=root
     - DB_PASS=lab2
     - DB_PORT=3306
